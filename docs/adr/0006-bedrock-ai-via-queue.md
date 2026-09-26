@@ -11,9 +11,9 @@ never wait on the AI.
 - Messages that need AI enqueue a job on **`ai-jobs` (SQS)**.
 - **`ai-worker` Lambda** calls the **Bedrock Converse API (`ConverseStream`)** and streams
   chunks to clients over the WebSocket, then saves the final message.
-- Model choice: fast/low-cost Claude model for chat; stronger Claude model for scam checks.
+- Model choice: fast/low-cost Claude model for host chatter; stronger Claude model for trivia generation and scam checks.
   Model IDs live in config, not code.
-- **Bedrock Guardrails** on every call. Per-user daily token budget enforced by the worker.
+- **Bedrock Guardrails** on every call. Per-family daily token budget enforced by the worker.
 
 ## Consequences
 - Automatic retries and a dead-letter queue for failed AI jobs.
