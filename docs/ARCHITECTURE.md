@@ -23,7 +23,7 @@ Chat exists as *table talk* around the games, not as the main feature
 | 2 | Family accounts + **daily family leaderboard** | Platform |
 | 3 | **Daily Question** (answers revealed after you answer) + **AI host "Chef"** | Party game |
 | 4 | **Arcade mini-game** (e.g. "Catch the Chapati") with a family high-score board, built with **Phaser** | Real game (engine) |
-| 5 | **Trivia Night**, **Who Knows Mom Best?**, table-talk chat, scam checker | Party games + utilities |
+| 5 | **Trivia Night**, **Who Knows Mom Best?**, table-talk chat | Party games + social features |
 
 ### Later
 Two Truths & a Lie · Caption This · collaborative AI-illustrated story · AI cartoon family photos ·
@@ -188,9 +188,9 @@ Table: `kitchen-table-<stage>`, keys `PK` / `SK`, TTL attribute `expiresAt`.
 - **Persona:** "Chef", the warm, slightly cheeky host of the Kitchen Table. Short messages,
   plain words, gentle teasing, never mean. Persona lives in one versioned system prompt.
 - **Jobs:** daily question generation, daily-question summaries, trivia question generation,
-  winner announcements, weekly recap, `@chef` replies, scam checks.
+  winner announcements, weekly recap, `@chef` replies.
 - **Models:** a fast, low-cost Claude model (Haiku class) for host chatter; a stronger Claude
-  model (Sonnet class) for trivia generation and scam checks. Exact Bedrock model/inference-profile
+  model (Sonnet class) for trivia generation. Exact Bedrock model/inference-profile
   IDs are pinned in config when AI work starts — never hard-coded in handlers.
 - **Guardrails:** Amazon Bedrock Guardrails on every call.
 - **Trivia quality:** AI-generated questions are validated with structured output

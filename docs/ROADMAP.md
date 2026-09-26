@@ -9,7 +9,7 @@ See [ADR-0010](adr/0010-games-first.md) for why the order looks like this.
 | 2 | Families + daily leaderboard | Backend, database, auth, deploys | first contact |
 | 3 | Daily Question + AI host "Chef" | Bedrock, schedules, realtime | yes |
 | 4 | Arcade mini-game (Phaser) | Game loop, sprites, collisions | reuses leaderboard |
-| 5 | Trivia, Who Knows Mom Best, table talk, scam checker | Putting it all together | yes |
+| 5 | Trivia, Who Knows Mom Best, table talk | Putting it all together | yes |
 
 ---
 
@@ -82,7 +82,6 @@ See [ADR-0010](adr/0010-games-first.md) for why the order looks like this.
 - [ ] Weekly Trivia Night (AI-generated, validated questions; weekly scoreboard)
 - [ ] Who Knows Mom Best? (quiz built from past Daily Question answers)
 - [ ] Table-talk threads per game/day, `@chef` mentions
-- [ ] Scam checker (text + screenshot) in the side menu
 - [ ] Weekly family recap from Chef
 - [ ] Prod deploy with all guardrails on
 

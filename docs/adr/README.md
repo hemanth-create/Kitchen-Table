@@ -14,7 +14,8 @@ To change a decision, add a new ADR that supersedes the old one — don't rewrit
 | [0007](0007-single-aws-account.md) | Single AWS account with dev/prod stages | Accepted (revisit) |
 | [0008](0008-no-e2e-encryption-v1.md) | No end-to-end encryption in v1 | Accepted |
 | [0009](0009-english-first-i18n-ready.md) | English first, i18n-ready | Accepted |
-| [0010](0010-games-first.md) | Games first: family game night, not another chat app | Accepted |
+| [0010](0010-games-first.md) | Games first: family game night, not another chat app | Accepted (scope clarified by 0012) |
 | [0011](0011-game-logic-and-phaser.md) | Pure-TS game logic package + Phaser for arcade games | Accepted |
+| [0012](0012-games-only-scope.md) | Family games only; remove the scam checker | Accepted |
 
 Template: [`template.md`](template.md)
