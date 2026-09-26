@@ -1,96 +1,107 @@
 # Kitchen Table — Roadmap
 
-Games first, learning one new thing per step. Each step ends with something your family can play.
-See [ADR-0010](adr/0010-games-first.md) for why the order looks like this.
+Prove the group loop first, then build the platform around it.
+See [ADR-0013](adr/0013-shared-game-first.md) for why the order looks like this.
 
-| Step | Build | You learn | AWS |
+| Step | Build | Proves / teaches | AWS |
 |---|---|---|---|
-| 1 | Daily Word Puzzle | TypeScript, game state, input, testing | none |
-| 2 | Families + daily leaderboard | Backend, database, auth, deploys | first contact |
-| 3 | Daily Question + AI host "Chef" | Bedrock, schedules, realtime | yes |
-| 4 | Arcade mini-game (Phaser) | Game loop, sprites, collisions | reuses leaderboard |
-| 5 | Trivia, Who Knows Mom Best, table talk | Putting it all together | yes |
+| 0 | WhatsApp playtest of Who Knows Us Best? | Do people want to play? | none |
+| 1 | Who Knows Us Best? — rules + local web prototype | TypeScript, game state, API, testing | none |
+| 2 | Deploy the prototype with room links → real playtest | Serverless, DynamoDB, CDK, CI/CD | first contact |
+| 3 | Accounts, multiple Tables, invites | Auth, permissions | yes |
+| 4 | Chef + Daily Question + push | Bedrock, schedules, notifications | yes |
+| 5 | Story Relay, quick polls, mobile builds | More games; native apps | yes |
+| — | Optional learning track: Word Puzzle, Phaser arcade | Game loop, sprites, collisions | reuses leaderboard |
 
 ---
 
-## Step 1 — Daily Word Puzzle (1–2 weeks, no AWS)
+## Step 0 — WhatsApp playtest (5–7 days, no code)
+
+- [ ] Run [the playtest kit](games/whatsapp-playtest.md) in one family or friend group
+- [ ] Record participation, replay requests, confusion and ideas each day
+- [ ] Decide: build Step 1, adjust and re-test, or try Daily Question instead
+
+**Done when:** you have a written go / adjust / stop decision.
+
+## Step 1 — Who Knows Us Best? prototype (2–3 weeks, no AWS)
 
 **Repo foundations**
 - [ ] pnpm + Turborepo monorepo, strict shared `tsconfig`, ESLint, Prettier
-- [ ] `packages/games` and `apps/mobile` (Expo, web target first)
+- [ ] `packages/games`, `packages/shared`, `packages/core`, `packages/adapters`, `apps/api`, `apps/mobile`
 - [ ] GitHub Actions: lint, typecheck, test on every push/PR
 
-**Game rules (`packages/games`)**
-- [ ] Puzzle number from date; word picked deterministically from a word list
-- [ ] Guess scoring: correct / present / absent (handles repeated letters properly)
-- [ ] Game state: guesses, win/lose, max 6 tries
-- [ ] Share text: `Kitchen Table #N x/6` + emoji grid
-- [ ] Unit tests for all of the above (Vitest)
+**Game rules (`packages/games`)** — per [the rules page](games/who-knows-us-best.md)
+- [ ] Rotation (join order, sit out, pass), question selection without repeats
+- [ ] Round state: open → picks → revealed (lazy: all submitted or deadline passed)
+- [ ] Scoring, known-by score, weekly board, "played together" milestone
+- [ ] Table-timezone day/week boundaries with an injected clock
+- [ ] Curated question bank (JSON, 50+ questions, human-reviewed)
+- [ ] Unit tests for every rule above
 
-**UI (`apps/mobile`, web)**
-- [ ] Board with colored tiles, on-screen keyboard, physical keyboard support
-- [ ] Save today's progress on the device
-- [ ] "Copy result" button
-- [ ] Large, high-contrast tiles (parent-friendly)
+**API + app (local)**
+- [ ] Hono API on Node with in-memory adapters; room link + device token
+- [ ] Server never returns picks before the reveal (tested)
+- [ ] Web screens: join via link, round, pick, reveal, next round, weekly board
+- [ ] Large, clear UI; works on a phone browser
 
-**Learning:** types, interfaces, union types, functions, modules, arrays/maps, testing.
+**Learning:** types, unions, interfaces, generics, modules, async/await, testing, HTTP APIs.
 
-**Done when:** your family plays the same word on the same day and shares results in WhatsApp.
+**Done when:** 3+ players (separate browser profiles or phones on your Wi-Fi) play full rounds end to end.
 
-## Step 2 — Families & leaderboard (2–3 weeks)
+## Step 2 — Deploy and playtest (1–2 weeks)
 
 **AWS foundations**
 - [ ] Root MFA on, IAM Identity Center user for daily work
 - [ ] AWS Budgets alarm (e.g. $25/month) with email alert
 - [ ] CDK bootstrapped; `dev` stage deploys from `main` via GitHub OIDC
 
-**Features**
-- [ ] Cognito passwordless sign-in (email OTP)
-- [ ] User profile (name, language, text size)
-- [ ] Create family, invite code, join family
-- [ ] Word list moves server-side; guesses verified with `packages/games`
-- [ ] Daily family leaderboard + family streak
+**Deploy**
+- [ ] DynamoDB adapters (conditional writes for open-round lock and picks)
+- [ ] API on Lambda + API Gateway (throttling on); web app on S3 + CloudFront
+- [ ] Plain-language privacy note in the app
+- [ ] Playtest with 1–2 real groups for a week; track the product metrics
 
-**Done when:** everyone signs in and sees today's family leaderboard.
+**Done when:** a real group finishes rounds without help and asks to replay.
 
-## Step 3 — Daily Question + Chef (2 weeks)
+## Step 3 — Accounts & Tables (2 weeks)
 
-- [ ] Enable Bedrock model access for the chosen Claude models
-- [ ] EventBridge Scheduler: daily drop per family (in family timezone)
-- [ ] Question bank + AI-generated questions
-- [ ] Answer-to-reveal rule enforced server-side
-- [ ] Chef persona prompt, Bedrock Guardrail, per-family AI budget
-- [ ] Chef's daily summary streamed over WebSocket
-- [ ] Push notification: "Today's question is on the table 🍽️"
+- [ ] Cognito passwordless sign-in (email OTP; passkeys later)
+- [ ] User can sit at multiple Tables (family, friends…)
+- [ ] Single-use invite codes, redeemed atomically
+- [ ] Playtest players claim their existing seats
+- [ ] Membership check on every read/write (tested)
 
-**Done when:** a parent answers the daily question and laughs at Chef's summary.
+**Done when:** you sit at a family Table and a friends Table from one account.
 
-## Step 4 — Arcade mini-game (2–3 weeks)
+## Step 4 — Chef, Daily Question, push (2–3 weeks)
 
-- [ ] `apps/arcade` with Phaser 3 + TypeScript
-- [ ] "Catch the Chapati": move, falling items, collisions, score, lives, difficulty ramp
-- [ ] Embedded in the app (web directly, WebView on native)
-- [ ] Family high-score board with server-side plausibility checks
-- [ ] Android internal test build on parents' phones
+- [ ] Write the Daily Question rules page first
+- [ ] Enable Bedrock model access; Chef persona prompt + Guardrail
+- [ ] `ai-worker`: idempotent event IDs, timeout, fallback text, per-Table budget
+- [ ] Chef reaction after each reveal (optional, never blocking)
+- [ ] Daily Question with EventBridge Scheduler (Table timezone), lazy reveal at close
+- [ ] Push notifications: "new round", "results are in" (Expo Push)
 
-**Learning:** game loop, delta time, sprites, input, collision, scenes, asset loading.
+**Done when:** Chef's reactions make people laugh, and the game still works with Chef switched off.
 
-**Done when:** a family high-score rivalry starts.
+## Step 5 — More games & mobile (3–4 weeks)
 
-## Step 5 — More games & table talk (3–4 weeks)
-
-- [ ] Weekly Trivia Night (AI-generated, validated questions; weekly scoreboard)
-- [ ] Who Knows Mom Best? (quiz built from past Daily Question answers)
-- [ ] Table-talk threads per game/day, `@chef` mentions
-- [ ] Weekly family recap from Chef
+- [ ] Rules pages first: Story Relay, quick polls
+- [ ] Story Relay (turn + time limits so one person can't block the group)
+- [ ] Quick polls / This or That
+- [ ] Android internal test build (and TestFlight if needed)
 - [ ] Prod deploy with all guardrails on
 
-**Done when:** your parents use it for a week without needing help.
+**Done when:** groups play at least twice a week for a month.
+
+## Optional learning track (any time after Step 1)
+
+- [ ] Daily Word Puzzle in `packages/games` (solo, shareable result)
+- [ ] Phaser arcade mini-game with a Table high-score board
 
 ## Later (not scheduled)
 
-- Two Truths & a Lie, Caption This, collaborative AI-illustrated story
-- AI cartoon versions of family photos
-- Family Recipe & Story Book (voice → keepsake book)
-- Reminders (medication, birthdays)
+- Caption This (private media, uploader consent, easy removal)
+- Trivia Night with a human-reviewed question bank
+- Family Recipe & Story Book
 - More languages, public app store release

@@ -5,37 +5,47 @@
 
 ## 1. Product scope
 
-**Family game night, a few minutes a day.** A private, invite-only place where a family plays
-small games together, with an AI host (Claude on Amazon Bedrock), for **web, iOS and Android**.
-Chat exists as *table talk* around the games, not as the main feature
-(see [ADR-0010](adr/0010-games-first.md)).
+**Short games that families and friends play together.** A private place where a group — a
+**Table** — plays small, turn-based games, with an optional AI host "Chef" (Claude on Amazon
+Bedrock). Web first, then iOS and Android. Players are adults.
+See [ADR-0010](adr/0010-games-first.md), [ADR-0012](adr/0012-games-only-scope.md),
+[ADR-0013](adr/0013-shared-game-first.md).
+
+The product test: **do people come back to play with each other?** Not: do they use an AI feature.
 
 ### Design principles
-- **1–5 minutes.** Everything fits in a coffee break; parents never need a tutorial.
-- **Async and turn-based.** Everyone plays when they can; no need to be online together.
-- **About each other.** The best content is the family itself.
-- **Cooperative first.** Streaks and milestones belong to the whole family; leaderboards are friendly.
+- **1–5 minutes.** Everything fits in a coffee break; no tutorial needed.
+- **Async and turn-based.** Every round has a deadline; nobody needs to be online at the same time.
+- **About each other.** The best content is the group itself.
+- **Cooperative first.** Milestones belong to the whole Table and never name who missed.
+- **Works without AI.** Rules, scores, visibility and deadlines are plain code; Chef only adds flavour.
 
-### Games and features (in build order)
-| # | Feature | Type |
-|---|---|---|
-| 1 | **Daily Word Puzzle** — 5 letters, 6 guesses, same word for everyone each day, shareable result | Real game (logic) |
-| 2 | Family accounts + **daily family leaderboard** | Platform |
-| 3 | **Daily Question** (answers revealed after you answer) + **AI host "Chef"** | Party game |
-| 4 | **Arcade mini-game** (e.g. "Catch the Chapati") with a family high-score board, built with **Phaser** | Real game (engine) |
-| 5 | **Trivia Night**, **Who Knows Mom Best?**, table-talk chat | Party games + social features |
+### Tables
+- A **Table** is a private group: a family, a friend group, etc. A user can sit at several Tables.
+- Each Table has a name, a timezone, and 3–12 players.
+
+### Games (in build order)
+| # | Game | Type | Rules |
+|---|---|---|---|
+| 1 | **Who Knows Us Best?** — one player picks an answer, others guess, reveal together | Shared, async | [rules](games/who-knows-us-best.md) |
+| 2 | **Daily Question** — everyone answers one prompt; answers revealed at close | Shared, async | to write before Step 4 |
+| 3 | **Story Relay** — Chef opens a scenario; players add one line each or pick a twist | Shared, async | to write before Step 5 |
+| 4 | **Quick polls / This or That** — 30-second fillers between games | Shared, async | to write before Step 5 |
 
 ### Later
-Two Truths & a Lie · Caption This · collaborative AI-illustrated story · AI cartoon family photos ·
-**Family Recipe & Story Book** (voice → keepsake book) · reminders · more languages · public store launch.
+Caption This (needs private media + consent) · Trivia Night (reviewed question bank only) ·
+Daily Word Puzzle and Phaser arcade games (optional learning track, [ADR-0013](adr/0013-shared-game-first.md)) ·
+Family Recipe & Story Book · more languages · public store launch.
 
 ### Explicit non-goals for v1
-- Live real-time multiplayer (everything is turn-based / async)
-- Video/voice calls
-- Public profiles, feeds, or anything outside the family
-- End-to-end encryption (would block the AI host — see [ADR-0008](adr/0008-no-e2e-encryption-v1.md))
-- Public App Store / Play Store listing (see [ADR-0002](adr/0002-expo-universal-app.md))
-- Languages other than English (built i18n-ready — see [ADR-0009](adr/0009-english-first-i18n-ready.md))
+- Live real-time sessions and WebSockets ([ADR-0014](adr/0014-async-only-v1.md))
+- Children as players
+- Chat as a headline feature; video/voice calls
+- Public profiles, feeds, or anything outside a Table
+- End-to-end encryption ([ADR-0008](adr/0008-no-e2e-encryption-v1.md))
+- AI-generated **scored** content (e.g. trivia answers) without human review
+- Public App Store / Play Store listing ([ADR-0002](adr/0002-expo-universal-app.md))
+- Languages other than English ([ADR-0009](adr/0009-english-first-i18n-ready.md))
 
 ## 2. Key decisions
 
@@ -43,16 +53,15 @@ Two Truths & a Lie · Caption This · collaborative AI-illustrated story · AI c
 |---|---|---|---|
 | Language | **TypeScript** (strict) everywhere | One language for app, games, backend and infra | [0001](adr/0001-typescript-monorepo.md) |
 | Repo | **pnpm workspaces + Turborepo** monorepo | Shared types, one CI, fast builds | [0001](adr/0001-typescript-monorepo.md) |
-| App | **Expo (React Native) + Expo Router** → web, iOS, Android | One codebase; native push for parents | [0002](adr/0002-expo-universal-app.md) |
-| Game logic | **`packages/games`: pure TypeScript**, no UI, no AWS | Same rules run in app and on server (anti-cheat), easy to test | [0011](adr/0011-game-logic-and-phaser.md) |
-| Arcade engine | **Phaser 3** (web canvas; WebView on native) | Best-documented TS 2D engine; great for learning | [0011](adr/0011-game-logic-and-phaser.md) |
-| Backend | **API Gateway (HTTP + WebSocket) + Lambda**, **Hono** router | ~$0 idle cost, no servers to patch | [0003](adr/0003-serverless-backend.md) |
+| App | **Expo (React Native) + Expo Router**, web first | One codebase for web, iOS, Android | [0002](adr/0002-expo-universal-app.md) |
+| Game logic | **`packages/games`: pure, deterministic TypeScript** | Same rules on client and server; easy to test | [0011](adr/0011-game-logic-and-phaser.md) |
+| Backend | **API Gateway HTTP API + Lambda**, **Hono** router | ~$0 idle; the same Hono app runs locally on Node | [0003](adr/0003-serverless-backend.md) |
+| Updates | **No WebSockets in v1**: refresh on open/focus, light polling on an open round, push later | All games are async; far simpler | [0014](adr/0014-async-only-v1.md) |
 | Database | **DynamoDB**, single-table | Access patterns are known and key-based | [0004](adr/0004-dynamodb-single-table.md) |
-| Auth | **Cognito passwordless** (email OTP + passkeys) | No passwords for parents to forget | [0005](adr/0005-cognito-passwordless.md) |
-| AI | **Bedrock Converse API** (streaming), via **SQS** worker | Async, retryable, streamed to clients | [0006](adr/0006-bedrock-ai-via-queue.md) |
-| Schedules | **EventBridge Scheduler** | Daily question / puzzle rollover, weekly trivia & recap | [0010](adr/0010-games-first.md) |
-| Files | **S3** presigned uploads + **CloudFront** signed URLs | Private family media | — |
-| Push | **Expo Push Service** | Free, one API for iOS + Android | — |
+| Identity | **Room links** (secret link + device token) for the playtest; **Cognito passwordless** after | Playtest fast, then real accounts | [0015](adr/0015-room-links-before-accounts.md), [0005](adr/0005-cognito-passwordless.md) |
+| AI | **Bedrock Converse API** via an **SQS** worker, idempotent, non-streaming | Optional flavour; safe to retry | [0006](adr/0006-bedrock-ai-via-queue.md), [0014](adr/0014-async-only-v1.md) |
+| Schedules | **EventBridge Scheduler** (from Step 4) | Daily question drops, "results are in" pushes | [0010](adr/0010-games-first.md) |
+| Push | **Expo Push Service** (from Step 4) | Free, one API for iOS + Android | — |
 | IaC | **AWS CDK (TypeScript)** | AWS-native, same language | [0001](adr/0001-typescript-monorepo.md) |
 | Validation | **Zod** schemas shared by app and backend | One source of truth for data shapes | — |
 | Testing | **Vitest** (unit/integration), DynamoDB Local | Fast, TS-native | — |
@@ -62,102 +71,95 @@ Two Truths & a Lie · Caption This · collaborative AI-illustrated story · AI c
 ## 3. System overview
 
 ```
- Expo app (web / iOS / Android)
+ Expo app (web first; iOS / Android later)
    ├─ screens (React Native)
-   ├─ packages/games (pure TS rules)       ├─ Phaser arcade (canvas / WebView)
+   └─ packages/games (pure TS rules — also used by the server)
    │
-   │  HTTPS (REST)            │  WebSocket (live)          │ media upload
-   ▼                          ▼                            ▼
- API Gateway HTTP API    API Gateway WebSocket API    S3 (presigned PUT)
-   │  Cognito JWT auth        │  JWT checked on $connect   │
-   ▼                          ▼                        CloudFront (signed GET)
- Lambda: api (Hono)      Lambda: realtime
-   │  uses packages/games     │
-   │  to verify results       │
-   ├────────► DynamoDB ◄──────┤
+   │  HTTPS (REST): refresh on open/focus, light polling on an open round
+   ▼
+ API Gateway HTTP API
+   │  room token (playtest) → Cognito JWT (Step 3+)
+   ▼
+ Lambda: api (Hono) ── uses packages/games for every state change
    │
-   ├──► SQS: ai-jobs  ──► Lambda: ai-worker ──► Amazon Bedrock (ConverseStream)
-   │                          └──► streams "Chef" messages to clients via WebSocket
+   ├────────► DynamoDB
    │
-   └──► SQS: notify   ──► Lambda: notifier  ──► Expo Push ──► APNs / FCM
+   ├──► SQS: ai-jobs ──► Lambda: ai-worker ──► Amazon Bedrock (Converse)
+   │                         └─ saves Chef's message once (idempotent)
+   │
+   └──► SQS: notify  ──► Lambda: notifier ──► Expo Push        (Step 4+)
 
- EventBridge Scheduler ──► Lambda: scheduler (daily drop, weekly trivia, weekly recap)
+ EventBridge Scheduler ──► Lambda: scheduler (daily question, reveal pushes)  (Step 4+)
 ```
 
 Every SQS queue has a **dead-letter queue** and a CloudWatch alarm on it.
 
 ## 4. Core flows
 
-### 4.1 Daily Word Puzzle
-- **Step 1 (no backend):** the puzzle number is derived from the date; the word is picked
-  from a bundled word list by that number. Everyone gets the same word. Progress is saved on
-  the device. The share text looks like `Kitchen Table #12 4/6` + emoji grid.
-- **Step 2+ (with backend):** the word list moves server-side. The client sends its guesses;
-  `api` **replays them with `packages/games`** against the real answer and records the verified
-  result. The family leaderboard is built only from verified results.
+### 4.1 Who Knows Us Best? round
+Full rules: [games/who-knows-us-best.md](games/who-knows-us-best.md).
+1. `POST /tables/{id}/rounds` — `api` checks the caller sits at the Table, asks
+   `packages/games` for the next subject and an unused question, and writes the round with a
+   UTC deadline (24 h). Only one open round per Table (conditional write).
+2. `PUT /rounds/{id}/pick` — subject submits their answer, others their guess. Editable until reveal.
+3. `GET /rounds/{id}` — returns the round. **Reveal is computed lazily**: if everyone has
+   submitted or the deadline has passed, the round is revealed and picks are included;
+   otherwise only "who has submitted" is returned — never the picks.
+4. On first reveal, `api` enqueues one Chef job with event ID `ROUND#<id>#reveal`.
 
-### 4.2 Arcade high score
-1. The Phaser game runs locally and produces a score plus a small run summary
-   (duration, events).
-2. `api` runs **plausibility checks** (max points/second, duration limits) before storing
-   the family best score. Perfect anti-cheat is out of scope for a family app.
+### 4.2 Chef reaction (optional)
+1. `ai-worker` receives the job. Event ID + a conditional write guarantee at most **one** saved
+   Chef message and one usage record per event, even if SQS delivers the job twice.
+2. Prompt contains only revealed data: question, subject's answer, known-by score, first names.
+3. Calls Bedrock `Converse` with Guardrails and a timeout; saves the message.
+4. On error, timeout or budget exceeded, the client shows the plain fallback message instead.
+   The game never waits on Chef.
 
-### 4.3 Daily Question
-1. EventBridge Scheduler triggers the `scheduler` Lambda once a day per family.
-2. A question is picked from a curated bank, or generated by the AI host with the family's
-   past topics as context, and stored for that date.
-3. Members answer. **Answers are only returned to a member after they have answered.**
-4. Chef posts a playful summary once everyone has answered (via `ai-jobs`).
+### 4.3 Daily Question (Step 4)
+1. EventBridge Scheduler triggers `scheduler` once a day per Table (Table timezone).
+2. A prompt is picked from the curated bank (Chef may rephrase it — not required).
+3. Players answer; answers are shown to a player after they answer, and to everyone at close
+   (end of the Table's day). Same lazy-reveal rule as 4.1.
 
-### 4.4 AI host "Chef"
-1. Game events (daily summary, trivia rounds, winners, weekly recap) enqueue jobs on `ai-jobs`.
-2. `ai-worker` builds the prompt: Chef's persona, the game event, relevant family context.
-3. Calls Bedrock `ConverseStream` with Guardrails; streams to clients; saves the message.
-4. Per-family daily AI budget enforced by the worker.
-
-### 4.5 Table talk (chat)
-1. Each game/day has a table-talk thread for reactions and banter.
-2. `api` validates with Zod and **checks family membership on every request**.
-3. Messages are fanned out over WebSocket; offline members get a push via `notify`.
-4. `@chef` mentions enqueue an AI reply.
-
-### 4.6 Sign-in and joining a family
-1. Email → one-time code (or passkey on returning devices) via Cognito.
-2. First sign-in creates a `USER` profile.
-3. A member creates a family, or redeems an invite code (expires after 7 days, single use).
+### 4.4 Joining a Table
+- **Playtest (Steps 1–2):** the creator gets a secret room link. Opening it asks for a display
+  name and issues a random **device token** stored on the device. The creator's token can
+  remove players. ([ADR-0015](adr/0015-room-links-before-accounts.md))
+- **Step 3+:** Cognito passwordless sign-in; single-use invite codes redeemed with a
+  conditional write (atomic); playtest players can claim their existing seat.
+- Every read and write checks the caller sits at that Table — no exceptions.
 
 ## 5. Code structure
 
-Clean / hexagonal architecture: business and game rules know nothing about UI or AWS.
+Clean / hexagonal architecture: game and business rules know nothing about UI or AWS.
 
 ```
 apps/
   mobile/          Expo app — screens and UI only
-  arcade/          Phaser games (built for web; embedded via WebView on native)
-  api/             Lambda HTTP handlers (thin: validate → call core → respond)
-  realtime/        Lambda WebSocket handlers ($connect, $disconnect, sendMessage)
+  api/             Hono app: runs on Lambda in AWS and on Node locally
   workers/         ai-worker, notifier, scheduler
 packages/
-  games/           Pure TS game rules: word puzzle, scoring, streaks, trivia rounds
-  shared/          Zod schemas, API types, event types (used by app AND backend)
-  core/            Domain: families, members, games, questions, messages, permissions
-                   Defines ports (interfaces): GameRepo, AiClient, Notifier, ...
-  adapters/        Implementations of the ports: DynamoDB, Bedrock, S3, Expo Push
+  games/           Pure TS game rules: rounds, rotation, reveal, scoring, deadlines
+  shared/          Zod schemas, API types (used by app AND backend)
+  core/            Domain: tables, players, rounds; permission checks
+                   Defines ports (interfaces): TableRepo, RoundRepo, AiClient, Clock, ...
+  adapters/        Implementations of the ports: DynamoDB, in-memory (local dev/tests), Bedrock, Expo Push
   config/          Shared tsconfig, ESLint, Prettier configs
 infra/             AWS CDK app
-  stacks/          AuthStack, DataStack, ApiStack, RealtimeStack, AiStack, SchedulerStack, WebStack
 docs/
   ARCHITECTURE.md  this file
   ROADMAP.md       build steps and checklists
+  games/           one rules page per game + playtest kits
   adr/             decision records
 ```
 
 **Rules**
-- `packages/games` imports nothing but TypeScript itself: no React, no Phaser, no AWS.
-  Functions are deterministic (randomness comes from an injected seed) so they are easy to test.
+- `packages/games` imports nothing but TypeScript itself. Functions are deterministic:
+  time comes from an injected clock, randomness from an injected seed.
 - `core` imports only `shared` and `games`. Never `@aws-sdk/*`.
 - Handlers in `apps/*` are thin; logic lives in `core` / `games`.
 - Every external input is parsed with a Zod schema from `shared` before use.
+- Every game gets a rules page in `docs/games/` **before** its code is written.
 
 ## 6. Data model (DynamoDB, single table)
 
@@ -165,78 +167,80 @@ Table: `kitchen-table-<stage>`, keys `PK` / `SK`, TTL attribute `expiresAt`.
 
 | Entity / access pattern | PK | SK | Notes |
 |---|---|---|---|
-| User profile | `USER#<userId>` | `PROFILE` | name, email, `language` (default `en`), text size |
-| Families a user belongs to | `USER#<userId>` | `FAMILY#<familyId>` | role, joinedAt |
-| Family details | `FAMILY#<familyId>` | `META` | name, timezone, createdBy |
-| Members of a family | `FAMILY#<familyId>` | `MEMBER#<userId>` | role: `owner` / `member` |
-| Family streak | `FAMILY#<familyId>` | `STREAK` | current, best, lastFullDay |
-| Puzzle results for a day (leaderboard) | `FAMILY#<familyId>` | `PUZZLE#<yyyy-mm-dd>#<userId>` | guesses, solved, verified |
-| Arcade best scores | `FAMILY#<familyId>` | `SCORE#<gameKey>#<userId>` | best, achievedAt |
-| Daily question | `FAMILY#<familyId>` | `DQ#<yyyy-mm-dd>` | question text, source (`bank` / `ai`) |
-| Daily question answers | `DQ#<familyId>#<yyyy-mm-dd>` | `ANSWER#<userId>` | text; read only after caller answered |
-| Game session (trivia etc.) | `GAME#<gameId>` | `META` / `ROUND#<n>` / `PLAYER#<userId>` | state, scores |
-| Conversations (table talk) | `FAMILY#<familyId>` | `CONV#<convId>` | linked game/day, or DM |
-| Messages (newest first, paged) | `CONV#<convId>` | `MSG#<ulid>` | author (`USER#…` or `CHEF`), text, media |
-| Live connections of a user | `USER#<userId>` | `CONN#<connectionId>` | TTL 2h |
-| Connection → user lookup | GSI1 `CONN#<connectionId>` | `CONN` | for `$disconnect` cleanup |
-| Invite codes | `INVITE#<code>` | `INVITE` | familyId, TTL 7 days |
-| Push tokens | `USER#<userId>` | `PUSH#<token>` | platform |
-| AI usage | `FAMILY#<familyId>` | `USAGE#<yyyy-mm-dd>` | input/output tokens, TTL 90 days |
+| Table details | `TABLE#<tableId>` | `META` | name, timezone, createdBy |
+| Players at a Table (rotation order) | `TABLE#<tableId>` | `PLAYER#<playerId>` | display name, joinedAt, sittingOut, role |
+| Device token → player | `TOKEN#<sha256(token)>` | `TOKEN` | tableId, playerId (playtest only; hash stored, never the token) |
+| Rounds at a Table (newest first) | `TABLE#<tableId>` | `ROUND#<ulid>` | game, subject, questionId, deadline, status |
+| Open-round lock | `TABLE#<tableId>` | `OPEN_ROUND` | roundId; conditional write → one open round |
+| Picks in a round | `ROUND#<roundId>` | `PICK#<playerId>` | option, updatedAt |
+| Chef message for an event | `ROUND#<roundId>` | `CHEF#<eventType>` | text; conditional write → idempotent |
+| Questions used at a Table | `TABLE#<tableId>` | `USEDQ#<questionId>` | no repeats until bank exhausted |
+| Weekly scores | `TABLE#<tableId>` | `WEEK#<yyyy-Www>#<playerId>` | points |
+| AI usage | `TABLE#<tableId>` | `USAGE#<yyyy-mm-dd>#<eventId>` | tokens; keyed by event → idempotent |
+| **Step 3+:** User profile | `USER#<userId>` | `PROFILE` | name, email, `language` |
+| **Step 3+:** Tables a user sits at | `USER#<userId>` | `TABLE#<tableId>` | playerId |
+| **Step 3+:** Invite codes | `INVITE#<code>` | `INVITE` | tableId, TTL 7 days, single use |
+| **Step 4+:** Push tokens | `USER#<userId>` | `PUSH#<token>` | platform |
+
+The curated question bank ships as versioned JSON in `packages/games` (reviewed by a human).
 
 ## 7. AI design (Chef)
 
-- **Persona:** "Chef", the warm, slightly cheeky host of the Kitchen Table. Short messages,
-  plain words, gentle teasing, never mean. Persona lives in one versioned system prompt.
-- **Jobs:** daily question generation, daily-question summaries, trivia question generation,
-  winner announcements, weekly recap, `@chef` replies.
-- **Models:** a fast, low-cost Claude model (Haiku class) for host chatter; a stronger Claude
-  model (Sonnet class) for trivia generation. Exact Bedrock model/inference-profile
-  IDs are pinned in config when AI work starts — never hard-coded in handlers.
+- **Role:** optional host. Brief reactions after reveals, round recaps, optional rephrasing of
+  curated prompts, Story Relay openers. **Never** decides rules, scores, visibility or deadlines.
+- **Persona:** warm, playful, adult-friendly. Teases the *answer*, never a person's score.
+  One versioned system prompt.
+- **Cost:** one call per game event, shared by the whole Table — never one call per player action.
+  Per-Table daily budget; AWS Budgets alarm.
+- **Reliability:** stable event IDs, idempotent saves, timeout, plain fallback text. No streaming.
+- **Privacy:** Chef only receives revealed content. Players are told when game content is sent to Chef.
+  Bedrock does not use prompts/responses to train models. Content is never logged.
+- **Models:** a fast, low-cost Claude model (Haiku class). Exact Bedrock model/inference-profile
+  IDs are pinned in config when AI work starts.
 - **Guardrails:** Amazon Bedrock Guardrails on every call.
-- **Trivia quality:** AI-generated questions are validated with structured output
-  (question, 4 options, answer index, source hint) and can be regenerated if malformed.
-- **Cost control:** per-family daily token budget, AWS Budgets alarm, prompt caching for the persona prompt.
-- **Privacy:** Bedrock does not use prompts/responses to train models. Message text is never logged.
+- **Accuracy:** no AI-generated scored facts. Trivia (later) uses a human-reviewed bank; Chef may
+  only add banter and explanations around it.
 
 ## 8. Security & privacy
 
-- Bedrock, DynamoDB and S3 are only reached from Lambda via IAM roles —
+- **Plain-language privacy note** before any playtest: who can see what, that the app operator
+  can technically read game data (no E2E), what is sent to Chef, how to delete your content.
+- Room links use unguessable IDs (≥128-bit); device tokens are random and stored hashed.
+- Picks are never returned before the reveal — enforced server-side, not just hidden in the UI.
+- Players can sit out, skip, and delete their own picks.
+- Only Lambda reaches DynamoDB and Bedrock, via least-privilege IAM roles —
   **no AWS credentials ever ship in the app**.
-- Least-privilege IAM: each Lambda gets only the table actions / queues it needs.
-- Authorization on every request: family (and conversation/game) membership.
-- Game results are verified or plausibility-checked server-side before hitting leaderboards.
-- Media is private: presigned uploads, CloudFront signed URLs with short expiry.
-- Encryption in transit (TLS) and at rest (AWS-managed keys).
-- Logs contain IDs and metrics, never message bodies or answers.
+- API Gateway throttling on all routes; per-Table round limit (10/day).
+- Encryption in transit (TLS) and at rest (AWS-managed keys). Logs contain IDs and metrics only.
 - Account hygiene: root user MFA, no daily root use, IAM Identity Center logins.
 
 ## 9. Environments & deployment
 
-- **Step 1 has no AWS at all** — the web build can be hosted anywhere static (or just run locally).
-- From step 2: **one AWS account**, two CDK stages: `dev` and `prod` ([ADR-0007](adr/0007-single-aws-account.md)).
-- Every resource is prefixed with its stage (`kitchen-table-dev-…`, `kitchen-table-prod-…`).
+- **Local:** the Hono API runs on Node with in-memory adapters — no AWS needed to develop.
+- **AWS:** one account, `dev` and `prod` CDK stages ([ADR-0007](adr/0007-single-aws-account.md)),
+  resources prefixed with the stage.
 - Prod guardrails: DynamoDB deletion protection + point-in-time recovery,
-  S3 `RETAIN` removal policy + versioning, stack termination protection.
-- GitHub Actions → AWS via OIDC role. `main` deploys `dev` automatically; `prod` deploys on a tagged release.
-- Mobile: EAS Build → Google Play internal testing (and TestFlight if anyone uses an iPhone).
+  S3 `RETAIN` + versioning, stack termination protection.
+- GitHub Actions → AWS via OIDC. `main` deploys `dev`; `prod` deploys on a tagged release.
+- Web app: S3 + CloudFront. Mobile (later): EAS Build → internal testing tracks.
 
 ## 10. Observability
 
 - AWS Lambda Powertools (TypeScript): structured logs, metrics, tracing.
-- CloudWatch alarms: Lambda errors, DLQ depth, Bedrock throttling, budget.
-- One small CloudWatch dashboard per stage.
-- Product metrics (counts only): daily players, streak length, games played.
+- CloudWatch alarms: Lambda errors, DLQ depth, Bedrock errors/throttling, budget.
+- **Product metrics (counts only):** rounds started, % of players who pick per round,
+  rounds per session ("replay"), Tables active per week.
 
-## 11. Cost estimate (family scale, ~10 users)
+## 11. Cost estimate (a few Tables, ~10–30 players)
 
 Rough estimate, not a quote:
 
 | Item | Est. / month |
 |---|---|
-| Step 1 (static web, no AWS) | $0 |
-| Lambda, API Gateway, DynamoDB, SQS, S3, CloudFront, Scheduler | $0–5 (mostly free tier) |
+| Step 0 (WhatsApp) and local development | $0 |
+| Lambda, API Gateway, DynamoDB, SQS, S3, CloudFront | $0–5 (mostly free tier) |
 | Cognito (email OTP) | $0 at this scale |
-| Bedrock (Chef + trivia) | $2–15, depends on usage |
-| **Total AWS** | **~$5–20** |
-| Google Play developer | $25 one-time |
+| Bedrock (Chef: one call per reveal) | $1–5 |
+| **Total AWS** | **~$1–10** |
+| Google Play developer (later) | $25 one-time |
 | Apple Developer (only if needed) | $99 / year |
